@@ -1,7 +1,9 @@
 import { NextResponse } from "next/server"
-import { sql } from "@/lib/db"
+import { getDb } from "@/lib/db"
 import { jwtVerify } from "jose"
 import { cookies } from "next/headers"
+
+export const dynamic = "force-dynamic"
 
 const JWT_SECRET = new TextEncoder().encode(
   process.env.JWT_SECRET || "your-secret-key-change-in-production"
@@ -19,6 +21,7 @@ export async function GET() {
     const { payload } = await jwtVerify(token, JWT_SECRET)
     const userId = payload.userId as number
 
+    const sql = getDb()
     const users = await sql`
       SELECT id, username, email, is_admin FROM users WHERE id = ${userId}
     `

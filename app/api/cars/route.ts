@@ -1,8 +1,11 @@
 import { NextResponse } from "next/server"
-import { sql } from "@/lib/db"
+import { getDb } from "@/lib/db"
+
+export const dynamic = "force-dynamic"
 
 export async function GET() {
   try {
+    const sql = getDb()
     const cars = await sql`SELECT * FROM cars ORDER BY created_at DESC`
     return NextResponse.json(cars)
   } catch (error) {
@@ -16,6 +19,7 @@ export async function GET() {
 
 export async function POST(request: Request) {
   try {
+    const sql = getDb()
     const body = await request.json()
     const { name, image, rent_per_hour, capacity, fuel_type } = body
 

@@ -1,11 +1,14 @@
 import { NextResponse } from "next/server"
-import { sql } from "@/lib/db"
+import { getDb } from "@/lib/db"
+
+export const dynamic = "force-dynamic"
 
 export async function GET(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const sql = getDb()
     const { id } = await params
     const cars = await sql`SELECT * FROM cars WHERE id = ${parseInt(id)}`
 
@@ -31,6 +34,7 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const sql = getDb()
     const { id } = await params
     const body = await request.json()
     const { name, image, rent_per_hour, capacity, fuel_type } = body
@@ -65,6 +69,7 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const sql = getDb()
     const { id } = await params
     const result = await sql`DELETE FROM cars WHERE id = ${parseInt(id)} RETURNING *`
 

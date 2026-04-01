@@ -1,10 +1,11 @@
 import { neon } from '@neondatabase/serverless'
 
-if (!process.env.DATABASE_URL) {
-  throw new Error('DATABASE_URL environment variable is not set')
+export function getDb() {
+  if (!process.env.DATABASE_URL) {
+    throw new Error('DATABASE_URL environment variable is not set')
+  }
+  return neon(process.env.DATABASE_URL)
 }
-
-export const sql = neon(process.env.DATABASE_URL)
 
 // Type definitions
 export interface User {
@@ -30,7 +31,7 @@ export interface Booking {
   id: number
   user_id: number
   car_id: number
-  bookedtime_slots: {
+  booked_time_slots: {
     from: string
     to: string
   }

@@ -11,7 +11,7 @@ function RegisterContent() {
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [phone, setPhone] = useState("");
+  
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
@@ -26,7 +26,7 @@ function RegisterContent() {
     setError("");
     setSubmitting(true);
 
-    const result = await register({ username, email, password, phone });
+    const result = await register({ username, email, password });
 
     if (result.success) {
       router.push("/login");
@@ -135,23 +135,7 @@ function RegisterContent() {
               />
             </div>
 
-            <div>
-              <label
-                htmlFor="phone"
-                className="block text-sm font-medium text-foreground"
-              >
-                Telefono{" "}
-                <span className="text-muted-foreground">(opzionale)</span>
-              </label>
-              <input
-                type="tel"
-                id="phone"
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-                className="mt-1 block w-full rounded-md border border-input bg-background px-3 py-2 text-foreground shadow-sm focus:border-ring focus:outline-none focus:ring-1 focus:ring-ring"
-                placeholder="+39 123 456 7890"
-              />
-            </div>
+            
 
             {error && (
               <div className="rounded-lg bg-destructive/10 p-3 text-sm text-destructive">

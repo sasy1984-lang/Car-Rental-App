@@ -1,8 +1,10 @@
 import { NextResponse } from "next/server"
-import { sql } from "@/lib/db"
+import { getDb } from "@/lib/db"
 import { jwtVerify } from "jose"
 import { cookies } from "next/headers"
 import Stripe from "stripe"
+
+export const dynamic = "force-dynamic"
 
 const JWT_SECRET = new TextEncoder().encode(
   process.env.JWT_SECRET || "your-secret-key-change-in-production"
@@ -37,6 +39,7 @@ export async function GET() {
       )
     }
 
+    const sql = getDb()
     let bookings
     if (user.isAdmin) {
       bookings = await sql`
@@ -111,6 +114,7 @@ export async function POST(request: Request) {
     }
 
     // Create booking
+    const sql = getDb()
     const result = await sql`
       INSERT INTO bookings (car_id, user_id, booked_time_slots, total_hours, total_amount, transaction_id, driver_required)
       VALUES (${carId}, ${user.userId}, ${JSON.stringify(bookedTimeSlots)}, ${totalHours}, ${totalAmount}, ${transactionId}, ${driverRequired || false})

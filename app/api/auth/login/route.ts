@@ -1,8 +1,10 @@
 import { NextResponse } from "next/server"
-import { sql } from "@/lib/db"
+import { getDb } from "@/lib/db"
 import bcrypt from "bcryptjs"
 import { SignJWT } from "jose"
 import { cookies } from "next/headers"
+
+export const dynamic = "force-dynamic"
 
 const JWT_SECRET = new TextEncoder().encode(
   process.env.JWT_SECRET || "your-secret-key-change-in-production"
@@ -10,6 +12,7 @@ const JWT_SECRET = new TextEncoder().encode(
 
 export async function POST(request: Request) {
   try {
+    const sql = getDb()
     const body = await request.json()
     const { username, password } = body
 
