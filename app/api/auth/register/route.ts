@@ -1,48 +1,55 @@
-import { NextRequest, NextResponse } from "next/server";
-import { connectToDatabase } from "@/lib/db";
-import User from "@/lib/models/user";
+import { NextResponse } from "next/server"
+import { sql } from "@/lib/db"
+import bcrypt from "bcryptjs"
 
-export async function POST(request: NextRequest) {
+export async function POST(request: Request) {
   try {
-    await connectToDatabase();
-    const { username, email, password, phone } = await request.json();
+    const body = await request.json()
+    const { username, email, password } = body
 
     if (!username || !email || !password) {
       return NextResponse.json(
-        { error: "Username, email and password are required" },
+        { error: "Tutti i campi sono obbligatori" },
         { status: 400 }
-      );
+      )
     }
 
     // Check if user already exists
-    const existingUser = await User.findOne({ email });
-    if (existingUser) {
+    const existingUsers = await sql`
+      SELECT * FROM users WHERE username = ${username} OR email = ${email}
+    `
+
+    if (existingUsers.length > 0) {
       return NextResponse.json(
-        { error: "User with this email already exists" },
+        { error: "Username o email già in uso" },
         { status: 400 }
-      );
+      )
     }
 
-    // Create new user (password will be hashed by the pre-save hook)
-    const newUser = new User({
-      username,
-      email,
-      password,
-      phone,
-      admin: false,
-    });
+    // Hash password
+    const hashedPassword = await bcrypt.hash(password, 10)
 
-    await newUser.save();
+    // Create user
+    const result = await sql`
+      INSERT INTO users (username, email, password)
+      VALUES (${username}, ${email}, ${hashedPassword})
+      RETURNING id, username, email, is_admin
+    `
 
-    return NextResponse.json(
-      { message: "User registered successfully" },
-      { status: 201 }
-    );
+    return NextResponse.json({
+      message: "Registrazione completata con successo",
+      user: {
+        id: result[0].id,
+        username: result[0].username,
+        email: result[0].email,
+        isAdmin: result[0].is_admin,
+      },
+    }, { status: 201 })
   } catch (error) {
-    console.error("Registration error:", error);
+    console.error("Registration error:", error)
     return NextResponse.json(
-      { error: "Registration failed" },
+      { error: "Errore durante la registrazione" },
       { status: 500 }
-    );
+    )
   }
 }

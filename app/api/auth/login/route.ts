@@ -1,60 +1,77 @@
-import { NextRequest, NextResponse } from "next/server";
-import { connectToDatabase } from "@/lib/db";
-import User from "@/lib/models/user";
-import { cookies } from "next/headers";
+import { NextResponse } from "next/server"
+import { sql } from "@/lib/db"
+import bcrypt from "bcryptjs"
+import { SignJWT } from "jose"
+import { cookies } from "next/headers"
 
-export async function POST(request: NextRequest) {
+const JWT_SECRET = new TextEncoder().encode(
+  process.env.JWT_SECRET || "your-secret-key-change-in-production"
+)
+
+export async function POST(request: Request) {
   try {
-    await connectToDatabase();
-    const { email, password } = await request.json();
+    const body = await request.json()
+    const { username, password } = body
 
-    if (!email || !password) {
+    if (!username || !password) {
       return NextResponse.json(
-        { error: "Email and password are required" },
+        { error: "Username e password sono obbligatori" },
         { status: 400 }
-      );
+      )
     }
 
-    const user = await User.findOne({ email });
+    const users = await sql`
+      SELECT * FROM users WHERE username = ${username}
+    `
 
-    if (!user) {
+    if (users.length === 0) {
       return NextResponse.json(
-        { error: "Invalid email or password" },
+        { error: "Credenziali non valide" },
         { status: 401 }
-      );
+      )
     }
 
-    const isValidPassword = await user.comparePassword(password);
+    const user = users[0]
+    const isValidPassword = await bcrypt.compare(password, user.password)
 
     if (!isValidPassword) {
       return NextResponse.json(
-        { error: "Invalid email or password" },
+        { error: "Credenziali non valide" },
         { status: 401 }
-      );
+      )
     }
 
-    // Set session cookie
-    const cookieStore = await cookies();
-    cookieStore.set("userId", user._id.toString(), {
+    const token = await new SignJWT({ 
+      userId: user.id, 
+      username: user.username,
+      isAdmin: user.is_admin 
+    })
+      .setProtectedHeader({ alg: "HS256" })
+      .setExpirationTime("7d")
+      .sign(JWT_SECRET)
+
+    const cookieStore = await cookies()
+    cookieStore.set("auth-token", token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
       sameSite: "lax",
-      maxAge: 60 * 60 * 24 * 7, // 1 week
+      maxAge: 60 * 60 * 24 * 7,
       path: "/",
-    });
+    })
 
-    // Return user without password
-    const userResponse = {
-      _id: user._id,
-      username: user.username,
-      email: user.email,
-      phone: user.phone,
-      admin: user.admin,
-    };
-
-    return NextResponse.json({ user: userResponse });
+    return NextResponse.json({
+      user: {
+        id: user.id,
+        username: user.username,
+        email: user.email,
+        isAdmin: user.is_admin,
+      },
+    })
   } catch (error) {
-    console.error("Login error:", error);
-    return NextResponse.json({ error: "Login failed" }, { status: 500 });
+    console.error("Login error:", error)
+    return NextResponse.json(
+      { error: "Errore durante il login" },
+      { status: 500 }
+    )
   }
 }

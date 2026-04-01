@@ -8,7 +8,7 @@ import { AuthProvider, useAuth } from "@/lib/auth-context";
 function LoginContent() {
   const router = useRouter();
   const { user, login, loading } = useAuth();
-  const [email, setEmail] = useState("");
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -24,7 +24,7 @@ function LoginContent() {
     setError("");
     setSubmitting(true);
 
-    const result = await login(email, password);
+    const result = await login(username, password);
 
     if (result.success) {
       router.push("/");
@@ -80,19 +80,19 @@ function LoginContent() {
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <label
-                htmlFor="email"
+                htmlFor="username"
                 className="block text-sm font-medium text-foreground"
               >
-                Email
+                Username
               </label>
               <input
-                type="email"
-                id="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                type="text"
+                id="username"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
                 required
                 className="mt-1 block w-full rounded-md border border-input bg-background px-3 py-2 text-foreground shadow-sm focus:border-ring focus:outline-none focus:ring-1 focus:ring-ring"
-                placeholder="tuaemail@esempio.com"
+                placeholder="Il tuo username"
               />
             </div>
 

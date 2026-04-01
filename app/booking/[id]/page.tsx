@@ -7,7 +7,6 @@ import { Header } from "@/components/header";
 import { Loading } from "@/components/loading";
 import { AuthProvider, useAuth } from "@/lib/auth-context";
 import useSWR from "swr";
-import { format, differenceInMinutes, parseISO } from "date-fns";
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
@@ -19,30 +18,38 @@ function BookingContent({ carId }: { carId: string }) {
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
   const [driverRequired, setDriverRequired] = useState(false);
-  const [address, setAddress] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [bookingError, setBookingError] = useState("");
 
   const calculateTotal = () => {
-    if (!fromDate || !toDate || !car) return { totalMins: 0, totalAmount: 0 };
+    if (!fromDate || !toDate || !car) return { totalHours: 0, totalAmount: 0 };
 
-    const from = parseISO(fromDate);
-    const to = parseISO(toDate);
-    const totalMins = differenceInMinutes(to, from);
+    const from = new Date(fromDate);
+    const to = new Date(toDate);
+    const totalMins = (to.getTime() - from.getTime()) / (1000 * 60);
 
-    if (totalMins <= 0) return { totalMins: 0, totalAmount: 0 };
+    if (totalMins <= 0) return { totalHours: 0, totalAmount: 0 };
 
     const totalHours = totalMins / 60;
-    let totalAmount = totalHours * car.rentPerHour;
+    let totalAmount = totalHours * Number(car.rent_per_hour);
 
     if (driverRequired) {
       totalAmount += totalHours * 5; // 5 EUR/hour for driver
     }
 
-    return { totalMins, totalAmount: Math.round(totalAmount * 100) / 100 };
+    return { totalHours: Math.round(totalHours * 100) / 100, totalAmount: Math.round(totalAmount * 100) / 100 };
   };
 
-  const { totalMins, totalAmount } = calculateTotal();
+  const { totalHours, totalAmount } = calculateTotal();
+
+  const formatDate = (date: Date) => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    const hours = String(date.getHours()).padStart(2, '0');
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+    return `${year}-${month}-${day}T${hours}:${minutes}`;
+  };
 
   const handleBooking = async () => {
     if (!user) {
@@ -55,7 +62,7 @@ function BookingContent({ carId }: { carId: string }) {
       return;
     }
 
-    if (totalMins <= 0) {
+    if (totalHours <= 0) {
       setBookingError("La data di fine deve essere successiva alla data di inizio");
       return;
     }
@@ -63,23 +70,19 @@ function BookingContent({ carId }: { carId: string }) {
     setSubmitting(true);
     setBookingError("");
 
-    // For demo purposes, simulate a successful booking without actual Stripe payment
     try {
       const response = await fetch("/api/bookings", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          token: { email: user.email, id: "demo_token" },
-          car: carId,
-          user: user._id,
+          carId: parseInt(carId),
           bookedTimeSlots: {
             from: fromDate,
             to: toDate,
           },
-          totalMins,
+          totalHours: Math.ceil(totalHours),
           totalAmount,
           driverRequired,
-          address: driverRequired ? address : undefined,
         }),
       });
 
@@ -179,12 +182,12 @@ function BookingContent({ carId }: { carId: string }) {
                       d="M13 10V3L4 14h7v7l9-11h-7z"
                     />
                   </svg>
-                  {car.fuelType}
+                  {car.fuel_type}
                 </span>
               </div>
               <div className="mt-6">
                 <span className="text-3xl font-bold text-accent">
-                  {"\u20AC"}{car.rentPerHour}
+                  {"\u20AC"}{car.rent_per_hour}
                 </span>
                 <span className="text-lg text-muted-foreground">/ora</span>
               </div>
@@ -218,7 +221,7 @@ function BookingContent({ carId }: { carId: string }) {
                   id="fromDate"
                   value={fromDate}
                   onChange={(e) => setFromDate(e.target.value)}
-                  min={format(new Date(), "yyyy-MM-dd'T'HH:mm")}
+                  min={formatDate(new Date())}
                   className="mt-1 block w-full rounded-md border border-input bg-background px-3 py-2 text-foreground shadow-sm focus:border-ring focus:outline-none focus:ring-1 focus:ring-ring"
                 />
               </div>
@@ -235,7 +238,7 @@ function BookingContent({ carId }: { carId: string }) {
                   id="toDate"
                   value={toDate}
                   onChange={(e) => setToDate(e.target.value)}
-                  min={fromDate || format(new Date(), "yyyy-MM-dd'T'HH:mm")}
+                  min={fromDate || formatDate(new Date())}
                   className="mt-1 block w-full rounded-md border border-input bg-background px-3 py-2 text-foreground shadow-sm focus:border-ring focus:outline-none focus:ring-1 focus:ring-ring"
                 />
               </div>
@@ -256,25 +259,6 @@ function BookingContent({ carId }: { carId: string }) {
                 </label>
               </div>
 
-              {driverRequired && (
-                <div>
-                  <label
-                    htmlFor="address"
-                    className="block text-sm font-medium text-foreground"
-                  >
-                    Indirizzo di ritiro
-                  </label>
-                  <input
-                    type="text"
-                    id="address"
-                    value={address}
-                    onChange={(e) => setAddress(e.target.value)}
-                    placeholder="Via, Citta, CAP"
-                    className="mt-1 block w-full rounded-md border border-input bg-background px-3 py-2 text-foreground shadow-sm focus:border-ring focus:outline-none focus:ring-1 focus:ring-ring"
-                  />
-                </div>
-              )}
-
               {totalAmount > 0 && (
                 <div className="rounded-lg bg-muted p-4">
                   <div className="flex items-center justify-between">
@@ -282,7 +266,7 @@ function BookingContent({ carId }: { carId: string }) {
                       Durata totale
                     </span>
                     <span className="font-medium text-foreground">
-                      {Math.floor(totalMins / 60)}h {totalMins % 60}m
+                      {Math.floor(totalHours)}h {Math.round((totalHours % 1) * 60)}m
                     </span>
                   </div>
                   <div className="mt-2 flex items-center justify-between border-t border-border pt-2">
@@ -304,7 +288,7 @@ function BookingContent({ carId }: { carId: string }) {
 
               <button
                 onClick={handleBooking}
-                disabled={submitting || !fromDate || !toDate || totalMins <= 0}
+                disabled={submitting || !fromDate || !toDate || totalHours <= 0}
                 className="w-full rounded-lg bg-accent py-3 text-base font-semibold text-accent-foreground transition-colors hover:bg-accent/90 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {submitting

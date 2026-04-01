@@ -4,12 +4,12 @@ import Image from "next/image";
 import Link from "next/link";
 
 interface Car {
-  _id: string;
+  id: number;
   name: string;
   image: string;
   capacity: number;
-  fuelType: string;
-  rentPerHour: number;
+  fuel_type: string;
+  rent_per_hour: number;
 }
 
 export function CarCard({ car }: { car: Car }) {
@@ -37,16 +37,16 @@ export function CarCard({ car }: { car: Car }) {
             <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
             </svg>
-            {car.fuelType}
+            {car.fuel_type}
           </span>
         </div>
         <div className="mt-4 flex items-center justify-between">
           <div>
-            <span className="text-2xl font-bold text-accent">{"\u20AC"}{car.rentPerHour}</span>
+            <span className="text-2xl font-bold text-accent">{"\u20AC"}{car.rent_per_hour}</span>
             <span className="text-sm text-muted-foreground">/ora</span>
           </div>
           <Link
-            href={`/booking/${car._id}`}
+            href={`/booking/${car.id}`}
             className="rounded-md bg-accent px-4 py-2 text-sm font-medium text-accent-foreground transition-colors hover:bg-accent/90"
           >
             Prenota

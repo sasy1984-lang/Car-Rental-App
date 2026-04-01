@@ -50,7 +50,7 @@ export function Header() {
               Le Mie Prenotazioni
             </Link>
           )}
-          {user?.admin && (
+          {user?.isAdmin && (
             <Link
               href="/admin"
               className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
@@ -151,7 +151,7 @@ export function Header() {
                 Le Mie Prenotazioni
               </Link>
             )}
-            {user?.admin && (
+            {user?.isAdmin && (
               <Link
                 href="/admin"
                 className="rounded-md px-3 py-2 text-sm font-medium text-foreground hover:bg-muted"

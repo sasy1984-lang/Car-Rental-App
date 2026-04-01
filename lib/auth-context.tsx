@@ -4,18 +4,17 @@ import { createContext, useContext, useEffect, useState, useCallback } from "rea
 import useSWR from "swr";
 
 interface User {
-  _id: string;
+  id: number;
   username: string;
   email: string;
-  phone?: string;
-  admin: boolean;
+  isAdmin: boolean;
 }
 
 interface AuthContextType {
   user: User | null;
   loading: boolean;
-  login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
-  register: (data: { username: string; email: string; password: string; phone?: string }) => Promise<{ success: boolean; error?: string }>;
+  login: (username: string, password: string) => Promise<{ success: boolean; error?: string }>;
+  register: (data: { username: string; email: string; password: string }) => Promise<{ success: boolean; error?: string }>;
   logout: () => Promise<void>;
   refreshUser: () => void;
 }
@@ -36,29 +35,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, [data]);
 
-  const login = useCallback(async (email: string, password: string) => {
+  const login = useCallback(async (username: string, password: string) => {
     try {
       const res = await fetch("/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ username, password }),
       });
 
       const data = await res.json();
 
       if (!res.ok) {
-        return { success: false, error: data.error || "Login failed" };
+        return { success: false, error: data.error || "Login fallito" };
       }
 
       setUser(data.user);
       mutate();
       return { success: true };
     } catch {
-      return { success: false, error: "An error occurred" };
+      return { success: false, error: "Si è verificato un errore" };
     }
   }, [mutate]);
 
-  const register = useCallback(async (userData: { username: string; email: string; password: string; phone?: string }) => {
+  const register = useCallback(async (userData: { username: string; email: string; password: string }) => {
     try {
       const res = await fetch("/api/auth/register", {
         method: "POST",
@@ -69,12 +68,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const data = await res.json();
 
       if (!res.ok) {
-        return { success: false, error: data.error || "Registration failed" };
+        return { success: false, error: data.error || "Registrazione fallita" };
       }
 
       return { success: true };
     } catch {
-      return { success: false, error: "An error occurred" };
+      return { success: false, error: "Si è verificato un errore" };
     }
   }, []);
 

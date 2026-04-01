@@ -44,8 +44,8 @@ function CarsContent() {
 
         {cars && cars.length > 0 && (
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {cars.map((car: { _id: string; name: string; image: string; capacity: number; fuelType: string; rentPerHour: number }) => (
-              <CarCard key={car._id} car={car} />
+            {cars.map((car: { id: number; name: string; image: string; capacity: number; fuel_type: string; rent_per_hour: number }) => (
+              <CarCard key={car.id} car={car} />
             ))}
           </div>
         )}

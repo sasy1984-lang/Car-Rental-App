@@ -11,12 +11,12 @@ import useSWR, { mutate } from "swr";
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
 interface Car {
-  _id: string;
+  id: number;
   name: string;
   image: string;
   capacity: number;
-  fuelType: string;
-  rentPerHour: number;
+  fuel_type: string;
+  rent_per_hour: number;
 }
 
 function AdminContent() {
@@ -30,14 +30,14 @@ function AdminContent() {
     name: "",
     image: "",
     capacity: 4,
-    fuelType: "Benzina",
-    rentPerHour: 10,
+    fuel_type: "Benzina",
+    rent_per_hour: 10,
   });
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
 
   useEffect(() => {
-    if (!authLoading && (!user || !user.admin)) {
+    if (!authLoading && (!user || !user.isAdmin)) {
       router.push("/");
     }
   }, [user, authLoading, router]);
@@ -47,8 +47,8 @@ function AdminContent() {
       name: "",
       image: "",
       capacity: 4,
-      fuelType: "Benzina",
-      rentPerHour: 10,
+      fuel_type: "Benzina",
+      rent_per_hour: 10,
     });
     setEditingCar(null);
     setShowForm(false);
@@ -61,8 +61,8 @@ function AdminContent() {
       name: car.name,
       image: car.image,
       capacity: car.capacity,
-      fuelType: car.fuelType,
-      rentPerHour: car.rentPerHour,
+      fuel_type: car.fuel_type,
+      rent_per_hour: Number(car.rent_per_hour),
     });
     setShowForm(true);
   };
@@ -73,24 +73,36 @@ function AdminContent() {
     setError("");
 
     try {
-      const url = "/api/cars";
-      const method = editingCar ? "PUT" : "POST";
-      const body = editingCar
-        ? { ...formData, _id: editingCar._id }
-        : formData;
+      if (editingCar) {
+        // Update existing car
+        const response = await fetch(`/api/cars/${editingCar.id}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(formData),
+        });
 
-      const response = await fetch(url, {
-        method,
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-      });
-
-      if (response.ok) {
-        mutate("/api/cars");
-        resetForm();
+        if (response.ok) {
+          mutate("/api/cars");
+          resetForm();
+        } else {
+          const data = await response.json();
+          setError(data.error || "Errore durante il salvataggio");
+        }
       } else {
-        const data = await response.json();
-        setError(data.error || "Errore durante il salvataggio");
+        // Create new car
+        const response = await fetch("/api/cars", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(formData),
+        });
+
+        if (response.ok) {
+          mutate("/api/cars");
+          resetForm();
+        } else {
+          const data = await response.json();
+          setError(data.error || "Errore durante il salvataggio");
+        }
       }
     } catch {
       setError("Errore di connessione");
@@ -99,11 +111,11 @@ function AdminContent() {
     }
   };
 
-  const handleDelete = async (carId: string) => {
+  const handleDelete = async (carId: number) => {
     if (!confirm("Sei sicuro di voler eliminare questo veicolo?")) return;
 
     try {
-      const response = await fetch(`/api/cars?id=${carId}`, {
+      const response = await fetch(`/api/cars/${carId}`, {
         method: "DELETE",
       });
 
@@ -117,7 +129,7 @@ function AdminContent() {
 
   if (authLoading || isLoading) return <Loading />;
 
-  if (!user?.admin) return null;
+  if (!user?.isAdmin) return null;
 
   return (
     <div className="min-h-screen bg-background">
@@ -203,15 +215,15 @@ function AdminContent() {
                       Carburante
                     </label>
                     <select
-                      value={formData.fuelType}
+                      value={formData.fuel_type}
                       onChange={(e) =>
-                        setFormData({ ...formData, fuelType: e.target.value })
+                        setFormData({ ...formData, fuel_type: e.target.value })
                       }
                       className="mt-1 block w-full rounded-md border border-input bg-background px-3 py-2 text-foreground"
                     >
                       <option>Benzina</option>
                       <option>Diesel</option>
-                      <option>Elettrico</option>
+                      <option>Elettrica</option>
                       <option>Ibrido</option>
                       <option>GPL</option>
                     </select>
@@ -224,11 +236,11 @@ function AdminContent() {
                   </label>
                   <input
                     type="number"
-                    value={formData.rentPerHour}
+                    value={formData.rent_per_hour}
                     onChange={(e) =>
                       setFormData({
                         ...formData,
-                        rentPerHour: parseFloat(e.target.value),
+                        rent_per_hour: parseFloat(e.target.value),
                       })
                     }
                     required
@@ -290,7 +302,7 @@ function AdminContent() {
               </thead>
               <tbody className="divide-y divide-border">
                 {cars.map((car: Car) => (
-                  <tr key={car._id}>
+                  <tr key={car.id}>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-3">
                         <div className="relative h-10 w-16 overflow-hidden rounded bg-muted">
@@ -311,10 +323,10 @@ function AdminContent() {
                       {car.capacity}
                     </td>
                     <td className="hidden px-4 py-3 text-muted-foreground md:table-cell">
-                      {car.fuelType}
+                      {car.fuel_type}
                     </td>
                     <td className="px-4 py-3 font-medium text-accent">
-                      {"\u20AC"}{car.rentPerHour}
+                      {"\u20AC"}{car.rent_per_hour}
                     </td>
                     <td className="px-4 py-3 text-right">
                       <button
@@ -324,7 +336,7 @@ function AdminContent() {
                         Modifica
                       </button>
                       <button
-                        onClick={() => handleDelete(car._id)}
+                        onClick={() => handleDelete(car.id)}
                         className="rounded px-2 py-1 text-sm text-destructive hover:bg-destructive/10"
                       >
                         Elimina

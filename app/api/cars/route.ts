@@ -1,97 +1,43 @@
-import { NextRequest, NextResponse } from "next/server";
-import { connectToDatabase } from "@/lib/db";
-import Car from "@/lib/models/car";
+import { NextResponse } from "next/server"
+import { sql } from "@/lib/db"
 
-// GET all cars
 export async function GET() {
   try {
-    await connectToDatabase();
-    const cars = await Car.find().sort({ createdAt: -1 });
-    return NextResponse.json(cars);
+    const cars = await sql`SELECT * FROM cars ORDER BY created_at DESC`
+    return NextResponse.json(cars)
   } catch (error) {
-    console.error("Error fetching cars:", error);
+    console.error("Error fetching cars:", error)
     return NextResponse.json(
-      { error: "Failed to fetch cars" },
+      { error: "Errore nel recupero delle auto" },
       { status: 500 }
-    );
+    )
   }
 }
 
-// POST - Add new car
-export async function POST(request: NextRequest) {
+export async function POST(request: Request) {
   try {
-    await connectToDatabase();
-    const body = await request.json();
+    const body = await request.json()
+    const { name, image, rent_per_hour, capacity, fuel_type } = body
 
-    const newCar = new Car({
-      name: body.name,
-      image: body.image,
-      capacity: body.capacity,
-      fuelType: body.fuelType,
-      rentPerHour: body.rentPerHour,
-      bookedTimeSlots: [],
-    });
-
-    await newCar.save();
-    return NextResponse.json(
-      { message: "Car added successfully", car: newCar },
-      { status: 201 }
-    );
-  } catch (error) {
-    console.error("Error adding car:", error);
-    return NextResponse.json({ error: "Failed to add car" }, { status: 500 });
-  }
-}
-
-// PUT - Update car
-export async function PUT(request: NextRequest) {
-  try {
-    await connectToDatabase();
-    const body = await request.json();
-
-    const car = await Car.findById(body._id);
-    if (!car) {
-      return NextResponse.json({ error: "Car not found" }, { status: 404 });
-    }
-
-    car.name = body.name;
-    car.image = body.image;
-    car.fuelType = body.fuelType;
-    car.rentPerHour = body.rentPerHour;
-    car.capacity = body.capacity;
-
-    await car.save();
-    return NextResponse.json({ message: "Car updated successfully", car });
-  } catch (error) {
-    console.error("Error updating car:", error);
-    return NextResponse.json(
-      { error: "Failed to update car" },
-      { status: 500 }
-    );
-  }
-}
-
-// DELETE - Delete car
-export async function DELETE(request: NextRequest) {
-  try {
-    await connectToDatabase();
-    const { searchParams } = new URL(request.url);
-    const carId = searchParams.get("id");
-
-    if (!carId) {
+    if (!name || !rent_per_hour || !capacity || !fuel_type) {
       return NextResponse.json(
-        { error: "Car ID is required" },
+        { error: "Tutti i campi sono obbligatori" },
         { status: 400 }
-      );
+      )
     }
 
-    await Car.findByIdAndDelete(carId);
-    return NextResponse.json({ message: "Car deleted successfully" });
+    const result = await sql`
+      INSERT INTO cars (name, image, rent_per_hour, capacity, fuel_type)
+      VALUES (${name}, ${image || null}, ${rent_per_hour}, ${capacity}, ${fuel_type})
+      RETURNING *
+    `
+
+    return NextResponse.json(result[0], { status: 201 })
   } catch (error) {
-    console.error("Error deleting car:", error);
+    console.error("Error creating car:", error)
     return NextResponse.json(
-      { error: "Failed to delete car" },
+      { error: "Errore nella creazione dell'auto" },
       { status: 500 }
-    );
+    )
   }
 }

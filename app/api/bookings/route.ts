@@ -1,104 +1,128 @@
-import { NextRequest, NextResponse } from "next/server";
-import { connectToDatabase } from "@/lib/db";
-import Booking from "@/lib/models/booking";
-import Car from "@/lib/models/car";
-import { v4 as uuidv4 } from "uuid";
-import Stripe from "stripe";
+import { NextResponse } from "next/server"
+import { sql } from "@/lib/db"
+import { jwtVerify } from "jose"
+import { cookies } from "next/headers"
+import Stripe from "stripe"
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || "", {
-  apiVersion: "2024-06-20",
-});
+const JWT_SECRET = new TextEncoder().encode(
+  process.env.JWT_SECRET || "your-secret-key-change-in-production"
+)
 
-// GET all bookings
-export async function GET(request: NextRequest) {
+const stripe = process.env.STRIPE_SECRET_KEY 
+  ? new Stripe(process.env.STRIPE_SECRET_KEY)
+  : null
+
+async function getUserFromToken() {
+  const cookieStore = await cookies()
+  const token = cookieStore.get("auth-token")?.value
+  
+  if (!token) return null
+  
   try {
-    await connectToDatabase();
-    const { searchParams } = new URL(request.url);
-    const userId = searchParams.get("userId");
-
-    let query = {};
-    if (userId) {
-      query = { user: userId };
-    }
-
-    const bookings = await Booking.find(query)
-      .populate("car")
-      .populate("user", "-password")
-      .sort({ createdAt: -1 });
-
-    return NextResponse.json(bookings);
-  } catch (error) {
-    console.error("Error fetching bookings:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch bookings" },
-      { status: 500 }
-    );
+    const { payload } = await jwtVerify(token, JWT_SECRET)
+    return payload as { userId: number; username: string; isAdmin: boolean }
+  } catch {
+    return null
   }
 }
 
-// POST - Create booking with Stripe payment
-export async function POST(request: NextRequest) {
+export async function GET() {
   try {
-    await connectToDatabase();
-    const body = await request.json();
-    const { token, car, user, bookedTimeSlots, totalMins, totalAmount, driverRequired, address } = body;
-
-    // Create Stripe customer and charge
-    const customer = await stripe.customers.create({
-      email: token.email,
-      source: token.id,
-    });
-
-    const payment = await stripe.charges.create(
-      {
-        amount: totalAmount * 100, // Convert to cents
-        currency: "eur",
-        customer: customer.id,
-        receipt_email: token.email,
-        description: `Car rental booking - ${car}`,
-      },
-      {
-        idempotencyKey: uuidv4(),
-      }
-    );
-
-    if (payment) {
-      // Create booking
-      const newBooking = new Booking({
-        car,
-        user,
-        bookedTimeSlots,
-        totalMins,
-        totalAmount,
-        transactionId: payment.id,
-        driverRequired,
-        address,
-      });
-
-      await newBooking.save();
-
-      // Update car with booked time slots
-      const carDoc = await Car.findById(car);
-      if (carDoc) {
-        carDoc.bookedTimeSlots.push(bookedTimeSlots);
-        await carDoc.save();
-      }
-
+    const user = await getUserFromToken()
+    
+    if (!user) {
       return NextResponse.json(
-        { message: "Booking successful", booking: newBooking },
-        { status: 201 }
-      );
-    } else {
-      return NextResponse.json(
-        { error: "Payment failed" },
-        { status: 400 }
-      );
+        { error: "Non autenticato" },
+        { status: 401 }
+      )
     }
+
+    let bookings
+    if (user.isAdmin) {
+      bookings = await sql`
+        SELECT b.*, c.name as car_name, c.image as car_image, u.username
+        FROM bookings b
+        JOIN cars c ON b.car_id = c.id
+        JOIN users u ON b.user_id = u.id
+        ORDER BY b.created_at DESC
+      `
+    } else {
+      bookings = await sql`
+        SELECT b.*, c.name as car_name, c.image as car_image
+        FROM bookings b
+        JOIN cars c ON b.car_id = c.id
+        WHERE b.user_id = ${user.userId}
+        ORDER BY b.created_at DESC
+      `
+    }
+
+    return NextResponse.json(bookings)
   } catch (error) {
-    console.error("Error creating booking:", error);
+    console.error("Error fetching bookings:", error)
     return NextResponse.json(
-      { error: "Failed to create booking" },
+      { error: "Errore nel recupero delle prenotazioni" },
       { status: 500 }
-    );
+    )
+  }
+}
+
+export async function POST(request: Request) {
+  try {
+    const user = await getUserFromToken()
+    
+    if (!user) {
+      return NextResponse.json(
+        { error: "Non autenticato" },
+        { status: 401 }
+      )
+    }
+
+    const body = await request.json()
+    const { carId, bookedTimeSlots, totalHours, totalAmount, driverRequired, token: stripeToken } = body
+
+    if (!carId || !bookedTimeSlots || !totalHours || !totalAmount) {
+      return NextResponse.json(
+        { error: "Dati mancanti per la prenotazione" },
+        { status: 400 }
+      )
+    }
+
+    // Process Stripe payment if token provided and Stripe is configured
+    let transactionId = null
+    if (stripeToken && stripe) {
+      try {
+        const charge = await stripe.charges.create({
+          amount: Math.round(totalAmount * 100),
+          currency: "eur",
+          source: stripeToken,
+          description: `Noleggio auto - ${totalHours} ore`,
+        })
+        transactionId = charge.id
+      } catch (stripeError) {
+        console.error("Stripe error:", stripeError)
+        return NextResponse.json(
+          { error: "Errore nel pagamento" },
+          { status: 400 }
+        )
+      }
+    } else {
+      // Demo mode - generate a fake transaction ID
+      transactionId = `demo_${Date.now()}`
+    }
+
+    // Create booking
+    const result = await sql`
+      INSERT INTO bookings (car_id, user_id, booked_time_slots, total_hours, total_amount, transaction_id, driver_required)
+      VALUES (${carId}, ${user.userId}, ${JSON.stringify(bookedTimeSlots)}, ${totalHours}, ${totalAmount}, ${transactionId}, ${driverRequired || false})
+      RETURNING *
+    `
+
+    return NextResponse.json(result[0], { status: 201 })
+  } catch (error) {
+    console.error("Error creating booking:", error)
+    return NextResponse.json(
+      { error: "Errore nella creazione della prenotazione" },
+      { status: 500 }
+    )
   }
 }

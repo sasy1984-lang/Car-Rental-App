@@ -5,26 +5,32 @@ import { Header } from "@/components/header";
 import { Loading } from "@/components/loading";
 import { AuthProvider, useAuth } from "@/lib/auth-context";
 import useSWR from "swr";
-import { format, parseISO } from "date-fns";
-import { it } from "date-fns/locale";
 import { useEffect } from "react";
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
 interface Booking {
-  _id: string;
-  car: {
-    _id: string;
-    name: string;
-    image: string;
-  };
-  bookedTimeSlots: {
+  id: number;
+  car_name: string;
+  car_image: string;
+  booked_time_slots: {
     from: string;
     to: string;
   };
-  totalAmount: number;
-  driverRequired: boolean;
-  createdAt: string;
+  total_amount: number;
+  driver_required: boolean;
+  created_at: string;
+}
+
+function formatDate(dateString: string) {
+  const date = new Date(dateString);
+  return date.toLocaleDateString("it-IT", {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
 }
 
 function BookingsContent() {
@@ -34,7 +40,7 @@ function BookingsContent() {
     data: bookings,
     error,
     isLoading,
-  } = useSWR(user ? `/api/bookings?userId=${user._id}` : null, fetcher);
+  } = useSWR(user ? `/api/bookings` : null, fetcher);
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -73,43 +79,35 @@ function BookingsContent() {
           <div className="mt-8 space-y-4">
             {bookings.map((booking: Booking) => (
               <div
-                key={booking._id}
+                key={booking.id}
                 className="rounded-xl border border-border bg-card p-6"
               >
                 <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                   <div>
                     <h3 className="text-lg font-semibold text-card-foreground">
-                      {booking.car?.name || "Veicolo"}
+                      {booking.car_name || "Veicolo"}
                     </h3>
                     <div className="mt-2 space-y-1 text-sm text-muted-foreground">
                       <p>
                         <span className="font-medium">Inizio:</span>{" "}
-                        {format(
-                          parseISO(booking.bookedTimeSlots.from),
-                          "PPP 'alle' HH:mm",
-                          { locale: it }
-                        )}
+                        {formatDate(booking.booked_time_slots.from)}
                       </p>
                       <p>
                         <span className="font-medium">Fine:</span>{" "}
-                        {format(
-                          parseISO(booking.bookedTimeSlots.to),
-                          "PPP 'alle' HH:mm",
-                          { locale: it }
-                        )}
+                        {formatDate(booking.booked_time_slots.to)}
                       </p>
-                      {booking.driverRequired && (
+                      {booking.driver_required && (
                         <p className="text-accent">Con autista</p>
                       )}
                     </div>
                   </div>
                   <div className="text-right">
                     <p className="text-2xl font-bold text-accent">
-                      {"\u20AC"}{booking.totalAmount.toFixed(2)}
+                      {"\u20AC"}{Number(booking.total_amount).toFixed(2)}
                     </p>
                     <p className="text-xs text-muted-foreground">
                       Prenotato il{" "}
-                      {format(parseISO(booking.createdAt), "dd/MM/yyyy")}
+                      {new Date(booking.created_at).toLocaleDateString("it-IT")}
                     </p>
                   </div>
                 </div>
