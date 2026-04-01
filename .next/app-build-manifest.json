@@ -29,12 +29,12 @@
       "static/chunks/main-app-424d1df6e6563d85.js",
       "static/chunks/app/api/auth/logout/route-83f884d264ab3bbd.js"
     ],
-    "/api/auth/register/route": [
+    "/api/auth/login/route": [
       "static/chunks/webpack-6fef72c737094e9e.js",
       "static/chunks/73cfcf22-fbb6626bbb2d33d3.js",
       "static/chunks/736-311b7e486eec912f.js",
       "static/chunks/main-app-424d1df6e6563d85.js",
-      "static/chunks/app/api/auth/register/route-83f884d264ab3bbd.js"
+      "static/chunks/app/api/auth/login/route-83f884d264ab3bbd.js"
     ],
     "/api/auth/me/route": [
       "static/chunks/webpack-6fef72c737094e9e.js",
@@ -43,12 +43,12 @@
       "static/chunks/main-app-424d1df6e6563d85.js",
       "static/chunks/app/api/auth/me/route-83f884d264ab3bbd.js"
     ],
-    "/api/auth/login/route": [
+    "/api/auth/register/route": [
       "static/chunks/webpack-6fef72c737094e9e.js",
       "static/chunks/73cfcf22-fbb6626bbb2d33d3.js",
       "static/chunks/736-311b7e486eec912f.js",
       "static/chunks/main-app-424d1df6e6563d85.js",
-      "static/chunks/app/api/auth/login/route-83f884d264ab3bbd.js"
+      "static/chunks/app/api/auth/register/route-83f884d264ab3bbd.js"
     ],
     "/api/bookings/route": [
       "static/chunks/webpack-6fef72c737094e9e.js",

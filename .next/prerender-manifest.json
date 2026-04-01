@@ -74,6 +74,30 @@
         "x-next-revalidate-tag-token"
       ]
     },
+    "/cars": {
+      "experimentalBypassFor": [
+        {
+          "type": "header",
+          "key": "next-action"
+        },
+        {
+          "type": "header",
+          "key": "content-type",
+          "value": "multipart/form-data;.*"
+        }
+      ],
+      "initialRevalidateSeconds": false,
+      "srcRoute": "/cars",
+      "dataRoute": "/cars.rsc",
+      "allowHeader": [
+        "host",
+        "x-matched-path",
+        "x-prerender-revalidate",
+        "x-prerender-revalidate-if-generated",
+        "x-next-revalidated-tags",
+        "x-next-revalidate-tag-token"
+      ]
+    },
     "/login": {
       "experimentalBypassFor": [
         {
@@ -145,37 +169,13 @@
         "x-next-revalidated-tags",
         "x-next-revalidate-tag-token"
       ]
-    },
-    "/cars": {
-      "experimentalBypassFor": [
-        {
-          "type": "header",
-          "key": "next-action"
-        },
-        {
-          "type": "header",
-          "key": "content-type",
-          "value": "multipart/form-data;.*"
-        }
-      ],
-      "initialRevalidateSeconds": false,
-      "srcRoute": "/cars",
-      "dataRoute": "/cars.rsc",
-      "allowHeader": [
-        "host",
-        "x-matched-path",
-        "x-prerender-revalidate",
-        "x-prerender-revalidate-if-generated",
-        "x-next-revalidated-tags",
-        "x-next-revalidate-tag-token"
-      ]
     }
   },
   "dynamicRoutes": {},
   "notFoundRoutes": [],
   "preview": {
-    "previewModeId": "2a9a9bc7b4c5fbf9c6f7b65620ba14a2",
-    "previewModeSigningKey": "e19cd9fe9ef16bbbc1d91531a08b753f5aae512871cf281fb1131983076577b3",
-    "previewModeEncryptionKey": "6fa7eab4c880880e6a21174b41893cc56ef136a47d9a12612686429441b9a9ad"
+    "previewModeId": "ec1a009cde79e61cd27b92c179d371b5",
+    "previewModeSigningKey": "e3d285be3ae5c2a908a9b66d06be4112f5b9842e7ca7b9f1907bbbcc802f41be",
+    "previewModeEncryptionKey": "44c39fa98d59d317596f03fef2a892a43b736849c483a700d5ab018eabd03e78"
   }
 }
